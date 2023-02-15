@@ -1,4 +1,4 @@
-name: scMARK_classification
+name: ramp-scMARK-classification
 channels:
   - pytorch
   - conda-forge
