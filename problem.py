@@ -2,6 +2,7 @@ import os
 import rampwf as rw
 from sklearn.model_selection import StratifiedShuffleSplit
 import scanpy as sc
+from sklearn.metrics import balanced_accuracy_score
 
 problem_title = "Single-cell RNA-seq cell types classification"
 _target_attr_name = "standard_true_celltype_v5"
@@ -21,8 +22,38 @@ Predictions = rw.prediction_types.make_multiclass(
 # An object implementing the workflow
 workflow = rw.workflows.Classifier()
 
+
+# Score def :
+# Custom BalancedAccuracy using unadjusted sklearn balanced accuracy
+# i.e. balanced_accuracy_score(..., adjusted=False)
+# cf discussions : https://github.com/paris-saclay-cds/ramp-workflow/pull/327
+class BalancedAccuracy(rw.score_types.ClassifierBaseScoreType):
+    is_lower_the_better = False
+    minimum = 0.0
+    maximum = 1.0
+
+    def __init__(self, name="balanced_accuracy", precision=2):
+        self.name = name
+        self.precision = precision
+
+    def __call__(self, y_true_label_index, y_pred_label_index):
+        """
+        Sinced adjusted=False, it will use the non-adjusted
+        balanced_accuracy_score from sklearn. It is computed as the macro
+        average Recall for each class.
+        For implementation details, see : https://github.com/scikit-learn/scikit-learn/blob/8c9c1f27b/sklearn/metrics/_classification.py#L2186 # noqa
+        """
+
+        score = balanced_accuracy_score(
+            y_true_label_index, y_pred_label_index, adjusted=False
+        )
+        return score
+
+
 score_types = [
-    rw.score_types.Accuracy(name="acc"),
+    BalancedAccuracy(name="bal_acc"),
+    # unused in this challenge, because adjusted
+    # rw.score_types.BalancedAccuracy(name="bacc"),
 ]
 
 
